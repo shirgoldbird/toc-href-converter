@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="js-yaml.js"></script>
+    <title>YAML TOC Accessibility Converter</title>
+</head>
+<body>
+    <h1>YAML TOC Accessibility Converter</h1>
+    <p>Use this converter to automatically remove hrefs from parent nodes. The href will be placed into a new child node with the same name as the parent.</p>
+    <p>WARNING: This has not been extensively tested and may have unexpected behavior. Please carefully review any changes.</p>
+    <div id="input">
+        <p><strong>Original TOC</strong></p>
+        <form id="converter" onsubmit="form_submit(this);">
+            <textarea id="toc" rows="40" cols="100"></textarea>
+            <br />
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <div>
+        <p><strong>Converted TOC</strong></p>
+        <textarea id="output" rows="40" cols="100">
+
+        </textarea>
+    </div>
+
+    <script type="text/javascript">
+        function form_submit(form) {
+            event.preventDefault();
+            var input = document.getElementById('toc');
+            var result = document.getElementById('output');
+            originalYaml = input.value;
+            //console.log(originalYaml);
+            //nativeObject = YAML.parse(originalYaml);
+            //console.log(jsyaml.load(originalYaml));
+            try {
+                obj = jsyaml.safeLoad(originalYaml);
+                //obj = YAML.parse(originalYaml);
+                console.log(obj);
+                
+                //result.value = JSON.stringify(obj, null, 2);
+                //result.value = JSON.stringify(convert_toc(obj), null, 2);
+                result.value = jsyaml.safeDump(convert_toc(obj), { 'noArrayIndent': true, 'noCompatMode': true, 'condenseFlow': true });
+                //result.value = YAML.stringify(convert_toc(obj));
+            } catch (err) {
+                console.log(err);
+                result.value = err.message || String(err);
+            }
+        }
+
+        var iterate = (obj, arr) => {
+            Object.keys(obj).forEach((key, index, array) => {
+                if (array.includes("href") && array.includes("items") && key == "href") { 
+                    arr.push(obj);
+                }
+
+                if (typeof obj[key] === 'object') {
+                    iterate(obj[key], arr);
+                }
+            })
+        }
+
+        function convert_toc(obj) {
+            var invalid_items = [];
+            
+            iterate(obj, invalid_items);
+
+            invalid_items.forEach(function (element) {
+                var href = element["href"];
+                var displayname = element["displayname"] || null;
+                var name = element["name"];
+    
+                if (displayname) {
+                    element["items"].unshift({ name, displayname, href });
+                    delete element["displayname"];
+                } else {
+                    element["items"].unshift({ name, href });
+                }
+    
+                delete element["href"];
+            });
+
+            return obj;
+        }
+ 
+
+    </script>
+</body>
+</html>
